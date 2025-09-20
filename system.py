@@ -37,7 +37,7 @@ class SimpleEmbedder:
 
         # Build vocabulary
         word_counts = Counter(all_words)
-        self.vocabulary = {word: idx for idx, (word, _) in enumerate(word_counts.items()) if count >= 2}
+        self.vocabulary = {word: idx for idx, (word, count) in enumerate(word_counts.items()) if count >= 2}
 
         # Calculate IDF scores
         num_docs = len(documents)
@@ -59,4 +59,65 @@ class SimpleEmbedder:
         total_words = len(words)
 
         for word, count in word_counts.items():
+            if word in self.vocabulary:
+                tf = count / total_words
+                idf = self.idf_scores[word]
+                vector[self_vocabulary[word]] = tf * idf
 
+        #Chuẩn hóa vector
+        norm = np.linalg.norm(vector)
+        return vector / norm if norm > 0 else vector
+    
+class VectorStore:
+
+    def __init__(self):
+        self.documents: List[Document] = []
+        self.embeddings: np.darray = None
+
+    def add_documents(self, docs: Document):
+        self.documents.extend(docs)
+        self._update_embeddings()
+
+    def add_documents(self, docs: List[Document]):
+        self.documents.extend(docs)
+        self._update_embeddings()
+
+    def _update_embeddings(self):
+        #update embeddings matrix
+        if self.documents:
+            self.embeddings = np.array([doc.embedding for doc in self.documents])
+            if embeddings:
+                self.embeddings = np.vstack(embeddings)
+
+    def similarity_search(self, query_embedding: np.ndarray, top_k: int = 5) -> List[Tuple[Document, float]]:
+        #find most similar documents
+        if self.embeddings is None or len(self.documents) == 0:
+            return []
+        #tinh toan do tuong dong cosine
+        similarities = np.dot(self.embeddings, query_embedding)
+
+        #top k 
+        results = []
+        for i, sim in enumerate(similarities):
+            if sim > threshold:
+                results.append((self.documents[i], float(sim)))
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results[:top_k]
+
+class SimpleRAG:
+    def __init__(self):
+         self.embedder = SimpleEmbedder()
+         self.vector_store = VectorStore()
+         self.is_ready = False
+
+    def add_documents(self, docs: List[Document]):
+        #Add a single document       
+def main():
+    rag = SimpleRAG()
+    sample_docs = []
+
+
+if __name__ == "__main__":
+    main()
+        
