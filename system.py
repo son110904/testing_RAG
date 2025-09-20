@@ -104,6 +104,9 @@ class VectorStore:
 
         results.sort(key=lambda x: x[1], reverse=True)
         return results[:top_k]
+    def clear(self):
+        self.documents = []
+        self.embeddings = None
 
 class SimpleRAG:
     def __init__(self):
@@ -112,7 +115,59 @@ class SimpleRAG:
          self.is_ready = False
 
     def add_documents(self, docs: List[Document]):
-        #Add a single document       
+        #Add a single document
+        full_texts = [f"{doc['title']} {doc['content']}" for doc in documents]   
+
+        self._fit_embedder(full_texts) 
+
+        docs = []
+        for i, doc_data in enumerate(documents):
+            embedding = self.embedder.embed(full_texts[i])
+            doc = Document(
+                id = doc_data['id'],
+                title = doc['Title'],
+                content = doc_data['content'],
+                embedding = embedding
+            )
+            docs.append(doc)
+        
+        self.vector_store.add_documents(docs)
+    def __fit_embedder(self, texts: List[str]):
+        self.embedder.fit(texts)
+        self.is_ready = True
+
+    def query(self, question: str, top_k: int = 3, similarity_threshold: float = 0.1) -> Dict:
+        if not self.is_ready:
+            return {
+                "answer": "No documents have been added to the knowledge base yet.",
+                "retrieved_docs": [],
+                "query": question
+            }
+        
+        query_embedding = self.embedder.embed(question)
+        retrived_docs = self.vector_store.similarity_search(query_embedding, top_k=top_k, threshold=similarity_threshold)
+        answer = self._generate_response(question, retrived_docs)
+        return {
+            "answer": answer,
+            "retrieved docs": [
+                {
+                    "title": doc.title,
+                    "content": doc.content[:200] + "..." if len(doc.content) > 200 else doc.content,
+                    "similarity": similarity,
+                    "id": doc.id
+                }
+                for doc, similarity in retrived_docs
+            ],
+            "query": question,
+            "num_retrieved": len(retrived_docs)
+        }
+    def _generate_response(self, question: str, retrived_docs: List[Tuple[Document, float]]) -> str:
+        if not retrived_docs:
+            return "I'm sorry, I couldn't find any relevant information in the knowledge base."
+        
+        response_parts = [f"Base on the available documents: here are some relevant information '{query}':\n"]
+        
+        
 def main():
     rag = SimpleRAG()
     sample_docs = []
